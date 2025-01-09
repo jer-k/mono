@@ -32,7 +32,10 @@ export function useQuery<
     q as AdvancedQuery<TSchema, TReturn>,
     enable && z.server !== null,
   );
+  console.log("The view returned from viewStore.getView is", view)
   // https://react.dev/reference/react/useSyncExternalStore
+  console.log("About to call useSyncExternalStore and return from useQuery.")
+  console.log("Current snapshot:", view.getSnapshot());
   return useSyncExternalStore(
     view.subscribeReactInternals,
     view.getSnapshot,
@@ -51,6 +54,8 @@ const defaultSnapshots = {
 function getDefaultSnapshot<TReturn extends QueryType>(
   singular: boolean,
 ): QueryResult<TReturn> {
+  console.log("Inside getDefaultSnapshot, singular is", singular)
+  console.log(`Will be returning defaultSnapshots.${singular ? "singular" : "plural"}`, singular ? defaultSnapshots.singular : defaultSnapshots.plural)
   return (
     singular ? defaultSnapshots.singular : defaultSnapshots.plural
   ) as QueryResult<TReturn>;
@@ -116,7 +121,9 @@ class ViewStore {
     getSnapshot: () => QueryResult<TReturn>;
     subscribeReactInternals: (internals: () => void) => () => void;
   } {
+    console.log("Inside getView, what is enabled?", enabled)
     if (!enabled) {
+      console.log("Not enabled, returning getDefaultSnapshot()")
       return {
         getSnapshot: () => getDefaultSnapshot(query.format.singular),
         subscribeReactInternals: disabledSubscriber,
@@ -124,8 +131,11 @@ class ViewStore {
     }
 
     const hash = query.hash() + clientID;
+    console.log("what is hash?", hash)
     let existing = this.#views.get(hash);
+    console.log("Existing is", existing)
     if (!existing) {
+      console.log("Inside !existing, creating new ViewWrapper")
       existing = new ViewWrapper(
         query,
         view => {
@@ -136,12 +146,18 @@ class ViewStore {
           if (lastView && lastView !== view) {
             throw new Error('View already exists');
           }
+          console.log("Triggering this.#views.set for hash inside ViewWrapper", hash)
+          console.log("What is lastView?", lastView)
+          console.log("What is view?", view)
           this.#views.set(hash, view);
         },
         () => {
+          console.log("Triggering this.#views.delete for hash", hash)
           this.#views.delete(hash);
         },
       ) as ViewWrapper<TSchema, TReturn>;
+      console.log("Triggering this.#views.set for hash at the end of !existing", hash)
+      console.log("What is existing?", existing)
       this.#views.set(hash, existing);
     }
     return existing as ViewWrapper<TSchema, TReturn>;
@@ -196,10 +212,13 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
   }
 
   #onData = (snap: Immutable<Smash<TReturn>>, resultType: ResultType) => {
+    console.log("Inside #onData")
+    console.log("What is snap?", snap)
     const data =
       snap === undefined
         ? snap
         : (deepClone(snap as ReadonlyJSONValue) as Smash<TReturn>);
+    console.log("Setting #snapshot to data", data)
     this.#snapshot = [data, {type: resultType}] as QueryResult<TReturn>;
     for (const internals of this.#reactInternals) {
       internals();
@@ -212,6 +231,7 @@ class ViewWrapper<TSchema extends TableSchema, TReturn extends QueryType> {
     }
 
     this.#view = this.#query.materialize();
+    console.log("Inside #materializeIfNeeded, adding listener", this.#onData)
     this.#view.addListener(this.#onData);
 
     this.#onMaterialized(this);

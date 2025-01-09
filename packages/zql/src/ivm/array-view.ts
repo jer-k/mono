@@ -44,10 +44,19 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
     this.#root = {'': format.singular ? undefined : []};
     input.setOutput(this);
 
+    this.#complete = false;  // 1. Start as incomplete
+    console.log("Inside ArrayView constructor, ensure #complete is false", this.#complete)
     if (queryComplete === true) {
-      this.#complete = true;
+        console.log("Inside ArrayView constructor, queryComplete === true")
+        queueMicrotask(() => {
+            console.log("Inside ArrayView constructor, queueMicrotask() running", this.#complete)
+            this.#complete = true;
+            this.#fireListeners();
+        });
     } else {
+      console.log("Inside ArrayView constructor, queryComplete === false")
       void queryComplete.then(() => {
+        console.log("Inside ArrayView constructor, queryComplete.then() running", this.#complete)
         this.#complete = true;
         this.#fireListeners();
       });
@@ -60,6 +69,9 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
   }
 
   addListener(listener: Listener<V>) {
+    console.log("Inside ArrayView.addListener, what are all listeners?", this.#listeners)
+    console.log("Inside ArrayView.addListener, about to add listener", listener)
+
     assert(!this.#listeners.has(listener), 'Listener already registered');
     this.#listeners.add(listener);
 
@@ -77,6 +89,9 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
   }
 
   #fireListener(listener: Listener<V>) {
+    console.log("Inside #fireListener")
+    console.log("What is this.#complete?", this.#complete)
+    console.log("What is this.#data?", this.data)
     listener(
       this.data as Immutable<V>,
       this.#complete ? 'complete' : 'unknown',
@@ -111,6 +126,7 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
       return;
     }
     this.#dirty = false;
+    console.log("Inside ArrayView.flush, about to call #fireListeners")
     this.#fireListeners();
   }
 }
