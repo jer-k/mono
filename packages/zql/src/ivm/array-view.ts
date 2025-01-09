@@ -44,15 +44,10 @@ export class ArrayView<V extends View> implements Output, TypedView<V> {
     this.#root = {'': format.singular ? undefined : []};
     input.setOutput(this);
 
-    this.#complete = false;  // 1. Start as incomplete
-    console.log("Inside ArrayView constructor, ensure #complete is false", this.#complete)
+    console.log("Inside ArrayView constructor, what is complete", this.#complete)
     if (queryComplete === true) {
         console.log("Inside ArrayView constructor, queryComplete === true")
-        queueMicrotask(() => {
-            console.log("Inside ArrayView constructor, queueMicrotask() running", this.#complete)
-            this.#complete = true;
-            this.#fireListeners();
-        });
+        this.#complete = true;
     } else {
       console.log("Inside ArrayView constructor, queryComplete === false")
       void queryComplete.then(() => {
